@@ -1,0 +1,113 @@
+#!/bin/sh
+
+# Restricted shell script
+# Supports both interactive and non-interactive modes.
+# In non-interactive mode, pass command [arguments...]
+# The arguments after the command are joined with spaces to form the single argument (for commands like 'splash').
+
+VERSION="1.0.0"
+
+# Function to display usage information
+usage() {
+    echo "Restricted shell commands:"
+    echo "  version    - Display version number"
+    echo "  wifi       - Configure wifi settings (not implemented)"
+    echo "  splash <path> - Copy specified file to /foo/splash.png"
+    echo "  shell      - Launch a normal shell"
+    echo "  exit       - Exit the restricted shell"
+    echo ""
+    echo "Usage: $0 [command [arg...]]"
+    echo "If no arguments, runs interactively."
+}
+
+# Non-interactive mode: process command if arguments are provided
+if [ $# -gt 0 ]; then
+    command="$1"
+    shift
+    arg="$*"  # Join remaining args with space (mimics 'read command arg' behavior)
+
+    case "$command" in
+        version)
+            echo "Restricted Shell Version $VERSION"
+            exit 0
+            ;;
+        wifi)
+            echo "WiFi configuration not implemented yet"
+            exit 0
+            ;;
+        splash)
+            if [ -z "$arg" ]; then
+                echo "Error: splash requires a file path argument" >&2
+                exit 1
+            fi
+            if [ -f "$arg" ]; then
+                if cp "$arg" /foo/splash.png; then
+                    echo "Splash image copied successfully"
+                    exit 0
+                else
+                    echo "Error: Failed to copy splash image" >&2
+                    exit 1
+                fi
+            else
+                echo "Error: File '$arg' does not exist" >&2
+                exit 1
+            fi
+            ;;
+        shell)
+            exec /bin/sh
+            ;;
+        exit)
+            exit 0
+            ;;
+        *)
+            usage >&2
+            exit 1
+            ;;
+    esac
+fi
+
+# Interactive mode: runs if no arguments are provided
+echo "Restricted shell v$VERSION. Type 'exit' to quit, or '?' for usage."
+while true; do
+    printf "restricted> "
+    if ! read -r command arg; then
+        # EOF (e.g., Ctrl+D)
+        exit 0
+    fi
+    case "$command" in
+        version)
+            echo "Restricted Shell Version $VERSION"
+            ;;
+        wifi)
+            echo "WiFi configuration not implemented yet"
+            ;;
+        splash)
+            if [ -z "$arg" ]; then
+                echo "Error: splash requires a file path argument" >&2
+            elif [ -f "$arg" ]; then
+                if cp "$arg" /foo/splash.png; then
+                    echo "Splash image copied successfully"
+                else
+                    echo "Error: Failed to copy splash image" >&2
+                fi
+            else
+                echo "Error: File '$arg' does not exist" >&2
+            fi
+            ;;
+        shell)
+            /bin/sh
+            ;;
+        exit|quit)
+            exit 0
+            ;;
+        ?|help)
+            usage
+            ;;
+        "")
+            # Empty line, ignore
+            ;;
+        *)
+            echo "Unknown command: $command. Type '?' for help." >&2
+            ;;
+    esac
+done
