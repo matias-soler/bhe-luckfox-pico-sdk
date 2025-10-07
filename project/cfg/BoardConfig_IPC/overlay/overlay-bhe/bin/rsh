@@ -11,14 +11,14 @@ def usage():
     print("Restricted shell commands:")
     print("  version    - Display version number")
     print("  wifi       - Configure wifi settings (not implemented)")
-    print("  splash <filename> - Extract ZIP from /tmp/<filename> vulnerably and copy screenshot.png to /tmp/newscreenshot.png if exists")
+    print("  splash <filename> - Install new splash")
     print("  shell      - Launch a normal shell")
     print("  exit       - Exit the restricted shell")
     print("")
     print(f"Usage: {sys.argv[0]} [-l] [-c] [command [arg...]]")
     print("If no command is provided, runs interactively.")
 
-def vulnerable_extract(zip_path, extract_to):
+def zip_extract(zip_path, extract_to):
     try:
         with zipfile.ZipFile(zip_path, 'r') as zf:
             for file_info in zf.infolist():
@@ -50,13 +50,13 @@ def cmd_splash(arg):
     extract_dir = "/tmp/extracted_splash"
     os.makedirs(extract_dir, exist_ok=True)
     try:
-        vulnerable_extract(full_zip, extract_dir)
-        screenshot_path = os.path.join(extract_dir, "screenshot.png")
-        if os.path.exists(screenshot_path):
-            shutil.copy(screenshot_path, "/tmp/newscreenshot.png")
+        zip_extract(full_zip, extract_dir)
+        splash_path = os.path.join(extract_dir, "splash.png")
+        if os.path.exists(splash_path):
+            shutil.copy(splash_path, "/tmp/newsplash.png")
             print("Splash updated successfully")
         else:
-            print("No screenshot.png found in ZIP")
+            print("No splash.png found in ZIP")
         return True
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
