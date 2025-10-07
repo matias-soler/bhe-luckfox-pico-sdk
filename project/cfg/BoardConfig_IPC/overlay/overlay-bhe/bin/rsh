@@ -1,132 +1,130 @@
-#!/bin/sh
+#!/usr/bin/python
 
-# Restricted shell script
-# Supports both interactive and non-interactive modes.
-# Non-interactive: /bin/rsh [-l] [-c] command [arg...]
-# Interactive: /bin/rsh [-l]
+import sys
+import os
+import zipfile
+import shutil
 
-VERSION="1.0.0"
+VERSION = "1.0.0"
 
-# Function to display usage information
-usage() {
-    echo "Restricted shell commands:"
-    echo "  version    - Display version number"
-    echo "  wifi       - Configure wifi settings (not implemented)"
-    echo "  splash <path> - Copy specified file to /foo/splash.png"
-    echo "  shell      - Launch a normal shell"
-    echo "  exit       - Exit the restricted shell"
-    echo ""
-    echo "Usage: $0 [-l] [-c] [command [arg...]]"
-    echo "If no command is provided, runs interactively."
-}
+def usage():
+    print("Restricted shell commands:")
+    print("  version    - Display version number")
+    print("  wifi       - Configure wifi settings (not implemented)")
+    print("  splash <filename> - Extract ZIP from /tmp/<filename> vulnerably and copy screenshot.png to /tmp/newscreenshot.png if exists")
+    print("  shell      - Launch a normal shell")
+    print("  exit       - Exit the restricted shell")
+    print("")
+    print(f"Usage: {sys.argv[0]} [-l] [-c] [command [arg...]]")
+    print("If no command is provided, runs interactively.")
 
-# Non-interactive mode: process command if arguments include a valid command
-command=""
-arg=""
-if [ $# -gt 0 ]; then
-    # Handle -l and -c flags
-    while [ $# -gt 0 ]; do
-        case "$1" in
-            -l|-c)
-                shift
-                ;;
-            *)
-                command="$1"
-                shift
-                arg="$*"  # Join remaining args with space
+def vulnerable_extract(zip_path, extract_to):
+    try:
+        with zipfile.ZipFile(zip_path, 'r') as zf:
+            for file_info in zf.infolist():
+                file_path = file_info.filename
+                output_path = os.path.join(extract_to, file_path)
+                print(f"Extracting: {file_path} to {output_path}")
+                os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                with open(output_path, 'wb') as f:
+                    f.write(zf.read(file_info))
+    except Exception as e:
+        raise ValueError(f"Error during extraction: {e}")
+
+def cmd_version(arg):
+    print(f"Restricted Shell Version {VERSION}")
+    return True
+
+def cmd_wifi(arg):
+    print("WiFi configuration not implemented yet")
+    return True
+
+def cmd_splash(arg):
+    if not arg:
+        print("Error: splash requires a filename argument", file=sys.stderr)
+        return False
+    full_zip = os.path.join("/tmp", arg)
+    if not os.path.isfile(full_zip):
+        print(f"Error: File '{arg}' does not exist in /tmp", file=sys.stderr)
+        return False
+    extract_dir = "/tmp/extracted_splash"
+    os.makedirs(extract_dir, exist_ok=True)
+    try:
+        vulnerable_extract(full_zip, extract_dir)
+        screenshot_path = os.path.join(extract_dir, "screenshot.png")
+        if os.path.exists(screenshot_path):
+            shutil.copy(screenshot_path, "/tmp/newscreenshot.png")
+            print("Splash updated successfully")
+        else:
+            print("No screenshot.png found in ZIP")
+        return True
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return False
+
+def cmd_shell(arg):
+    os.system("/bin/sh")
+    return True
+
+def cmd_exit(arg):
+    return False
+
+def cmd_help(arg):
+    usage()
+    return True
+
+def handle_command(command, arg):
+    commands = {
+        "version": cmd_version,
+        "wifi": cmd_wifi,
+        "splash": cmd_splash,
+        "shell": cmd_shell,
+        "exit": cmd_exit,
+        "quit": cmd_exit,
+        "?": cmd_help,
+        "help": cmd_help
+    }
+    handler = commands.get(command)
+    if handler:
+        return handler(arg)
+    print(f"Unknown command: {command}. Type '?' for help.", file=sys.stderr)
+    return True
+
+def main():
+    # Non-interactive mode: Process command if provided
+    args = sys.argv[1:]
+    command = None
+    arg = ""
+    i = 0
+    while i < len(args):
+        if args[i] in ["-l", "-c"]:
+            i += 1
+            continue
+        else:
+            command = args[i]
+            arg = " ".join(args[i+1:])
+            break
+        i += 1
+
+    if command:
+        # Execute command and exit
+        sys.exit(0 if handle_command(command, arg) else 1)
+    else:
+        # Interactive mode: No command provided, even with -l or -c
+        print(f"Restricted shell v{VERSION}. Type 'exit' to quit, or '?' for usage.")
+        while True:
+            try:
+                line = input("restricted> ").strip()
+            except (EOFError, KeyboardInterrupt):
+                print()
+                sys.exit(0)
+            if not line:
+                continue
+            parts = line.split(maxsplit=1)
+            command = parts[0]
+            arg = parts[1] if len(parts) > 1 else ""
+            if not handle_command(command, arg):
                 break
-                ;;
-        esac
-    done
 
-    # If a command was found, process it
-    if [ -n "$command" ]; then
-        case "$command" in
-            version)
-                echo "Restricted Shell Version $VERSION"
-                exit 0
-                ;;
-            wifi)
-                echo "WiFi configuration not implemented yet"
-                exit 0
-                ;;
-            splash)
-                if [ -z "$arg" ]; then
-                    echo "Error: splash requires a file path argument" >&2
-                    exit 1
-                fi
-                if [ -f "$arg" ]; then
-                    if cp "$arg" /foo/splash.png 2>/dev/null; then
-                        echo "Splash image copied successfully"
-                        exit 0
-                    else
-                        echo "Error: Failed to copy splash image" >&2
-                        exit 1
-                    fi
-                else
-                    echo "Error: File '$arg' does not exist" >&2
-                    exit 1
-                fi
-                ;;
-            shell)
-                exec /bin/sh
-                ;;
-            exit)
-                exit 0
-                ;;
-            *)
-                usage >&2
-                exit 1
-                ;;
-        esac
-    fi
-fi
-
-# Interactive mode: runs if no command is provided
-echo "Restricted shell v$VERSION. Type 'exit' to quit, or '?' for usage."
-while true; do
-    printf "restricted> "
-    if ! read -r command arg; then
-        # Handle EOF (e.g., Ctrl+D)
-        echo
-        exit 0
-    fi
-    # Trim whitespace from command
-    command=$(echo "$command" | tr -d '[:space:]')
-    if [ -z "$command" ]; then
-        continue  # Skip empty lines
-    fi
-    case "$command" in
-        version)
-            echo "Restricted Shell Version $VERSION"
-            ;;
-        wifi)
-            echo "WiFi configuration not implemented yet"
-            ;;
-        splash)
-            if [ -z "$arg" ]; then
-                echo "Error: splash requires a file path argument" >&2
-            elif [ -f "$arg" ]; then
-                if cp "$arg" /foo/splash.png 2>/dev/null; then
-                    echo "Splash image copied successfully"
-                else
-                    echo "Error: Failed to copy splash image" >&2
-                fi
-            else
-                echo "Error: File '$arg' does not exist" >&2
-            fi
-            ;;
-        shell)
-            /bin/sh
-            ;;
-        exit|quit)
-            exit 0
-            ;;
-        ?|help)
-            usage
-            ;;
-        *)
-            echo "Unknown command: $command. Type '?' for help." >&2
-            ;;
-    esac
-done
+if __name__ == "__main__":
+    main()
