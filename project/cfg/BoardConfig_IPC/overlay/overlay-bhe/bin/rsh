@@ -2,8 +2,8 @@
 
 # Restricted shell script
 # Supports both interactive and non-interactive modes.
-# In non-interactive mode, pass command [arguments...]
-# The arguments after the command are joined with spaces to form the single argument (for commands like 'splash').
+# Non-interactive: /bin/rsh [-l] [-c] command [arg...]
+# Interactive: /bin/rsh [-l]
 
 VERSION="1.0.0"
 
@@ -16,63 +16,85 @@ usage() {
     echo "  shell      - Launch a normal shell"
     echo "  exit       - Exit the restricted shell"
     echo ""
-    echo "Usage: $0 [command [arg...]]"
-    echo "If no arguments, runs interactively."
+    echo "Usage: $0 [-l] [-c] [command [arg...]]"
+    echo "If no command is provided, runs interactively."
 }
 
-# Non-interactive mode: process command if arguments are provided
+# Non-interactive mode: process command if arguments include a valid command
+command=""
+arg=""
 if [ $# -gt 0 ]; then
-    command="$1"
-    shift
-    arg="$*"  # Join remaining args with space (mimics 'read command arg' behavior)
+    # Handle -l and -c flags
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            -l|-c)
+                shift
+                ;;
+            *)
+                command="$1"
+                shift
+                arg="$*"  # Join remaining args with space
+                break
+                ;;
+        esac
+    done
 
-    case "$command" in
-        version)
-            echo "Restricted Shell Version $VERSION"
-            exit 0
-            ;;
-        wifi)
-            echo "WiFi configuration not implemented yet"
-            exit 0
-            ;;
-        splash)
-            if [ -z "$arg" ]; then
-                echo "Error: splash requires a file path argument" >&2
-                exit 1
-            fi
-            if [ -f "$arg" ]; then
-                if cp "$arg" /foo/splash.png; then
-                    echo "Splash image copied successfully"
-                    exit 0
-                else
-                    echo "Error: Failed to copy splash image" >&2
+    # If a command was found, process it
+    if [ -n "$command" ]; then
+        case "$command" in
+            version)
+                echo "Restricted Shell Version $VERSION"
+                exit 0
+                ;;
+            wifi)
+                echo "WiFi configuration not implemented yet"
+                exit 0
+                ;;
+            splash)
+                if [ -z "$arg" ]; then
+                    echo "Error: splash requires a file path argument" >&2
                     exit 1
                 fi
-            else
-                echo "Error: File '$arg' does not exist" >&2
+                if [ -f "$arg" ]; then
+                    if cp "$arg" /foo/splash.png 2>/dev/null; then
+                        echo "Splash image copied successfully"
+                        exit 0
+                    else
+                        echo "Error: Failed to copy splash image" >&2
+                        exit 1
+                    fi
+                else
+                    echo "Error: File '$arg' does not exist" >&2
+                    exit 1
+                fi
+                ;;
+            shell)
+                exec /bin/sh
+                ;;
+            exit)
+                exit 0
+                ;;
+            *)
+                usage >&2
                 exit 1
-            fi
-            ;;
-        shell)
-            exec /bin/sh
-            ;;
-        exit)
-            exit 0
-            ;;
-        *)
-            usage >&2
-            exit 1
-            ;;
-    esac
+                ;;
+        esac
+    fi
 fi
 
-# Interactive mode: runs if no arguments are provided
+# Interactive mode: runs if no command is provided
 echo "Restricted shell v$VERSION. Type 'exit' to quit, or '?' for usage."
 while true; do
     printf "restricted> "
     if ! read -r command arg; then
-        # EOF (e.g., Ctrl+D)
+        # Handle EOF (e.g., Ctrl+D)
+        echo
         exit 0
+    fi
+    # Trim whitespace from command
+    command=$(echo "$command" | tr -d '[:space:]')
+    if [ -z "$command" ]; then
+        continue  # Skip empty lines
     fi
     case "$command" in
         version)
@@ -85,7 +107,7 @@ while true; do
             if [ -z "$arg" ]; then
                 echo "Error: splash requires a file path argument" >&2
             elif [ -f "$arg" ]; then
-                if cp "$arg" /foo/splash.png; then
+                if cp "$arg" /foo/splash.png 2>/dev/null; then
                     echo "Splash image copied successfully"
                 else
                     echo "Error: Failed to copy splash image" >&2
@@ -102,9 +124,6 @@ while true; do
             ;;
         ?|help)
             usage
-            ;;
-        "")
-            # Empty line, ignore
             ;;
         *)
             echo "Unknown command: $command. Type '?' for help." >&2
