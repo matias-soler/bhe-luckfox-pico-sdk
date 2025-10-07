@@ -42,11 +42,11 @@ def cmd_wifi(arg):
 def cmd_splash(arg):
     if not arg:
         print("Error: splash requires a filename argument", file=sys.stderr)
-        return False
+        return True
     full_zip = os.path.join("/tmp", arg)
     if not os.path.isfile(full_zip):
         print(f"Error: File '{arg}' does not exist in /tmp", file=sys.stderr)
-        return False
+        return True
     extract_dir = "/tmp/extracted_splash"
     os.makedirs(extract_dir, exist_ok=True)
     try:
