@@ -69,4 +69,4 @@ clean: distclean
 distclean:
 	-rm -rf $(PKG_NAME_ANDROID_TOOLS) $(PKG_BIN)
 	-$(MAKE) clean -C $(PKG_DEP_OPENSSL)
-
+	

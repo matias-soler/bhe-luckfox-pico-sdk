@@ -17,3 +17,4 @@ patch -p1 < 0014-Specify-login-shell-in-standard-way.patch
 patch -p1 < 0015-make-adb-tcp-function-default-enbale.patch
 patch -p1 < 0015-support-rsa-key-authentication.patch
 patch -p1 < 0016-fix-static-link-dl-lll_unlock_wait_private.patch
+patch -p1 < 0017-bhe-services.path

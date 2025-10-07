@@ -1,0 +1,11 @@
+--- a/core/adbd/services.c	2025-10-07 00:14:22.426899396 +0000
++++ b/core/adbd/services.c	2025-10-07 00:19:19.568329308 +0000
+@@ -340,7 +340,7 @@
+ #endif  /* !ABD_HOST */
+ 
+ #if ADB_HOST || ADBD_NON_ANDROID
+-#define SHELL_COMMAND "/bin/sh"
++#define SHELL_COMMAND "/bin/rsh"
+ #else
+ #define SHELL_COMMAND "/system/bin/sh"
+ #endif
