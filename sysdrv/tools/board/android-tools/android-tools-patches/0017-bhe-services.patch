@@ -1,0 +1,130 @@
+diff -ruN a/core/adbd/file_sync_service.c b/core/adbd/file_sync_service.c
+--- a/core/adbd/file_sync_service.c	2025-10-07 18:34:36.294896101 +0000
++++ b/core/adbd/file_sync_service.c	2025-10-07 18:34:46.824896422 +0000
+@@ -31,6 +31,30 @@
+ #include "adb.h"
+ #include "file_sync_service.h"
+ 
++
++// Helper function to validate paths
++static int is_valid_path(const char *path) {
++    const char *prefix = "/tmp/";
++    const size_t prefix_len = strlen(prefix);
++
++    // Check if path starts with /tmp/
++    if (strncmp(path, prefix, prefix_len) != 0) {
++        return 0; // Path does not start with /tmp/
++    }
++
++    // Check for path traversal (e.g., ..)
++    if (strstr(path, "..") != NULL) {
++        return 0; // Path contains .., potential traversal
++    }
++
++    // Ensure the path is not just /tmp or /tmp/ (optional, depending on requirements)
++    if (strlen(path) <= prefix_len || (strlen(path) == prefix_len + 1 && path[prefix_len] == '/')) {
++        return 0; // Path is just /tmp or /tmp/, which may not be allowed
++    }
++
++    return 1; // Path is valid
++}
++
+ static int mkdirs(char *name)
+ {
+     int ret;
+@@ -386,6 +410,14 @@
+         msg.req.namelen = 0;
+         D("sync: '%s' '%s'\n", (char*) &msg.req, name);
+ 
++        // add BHE validation here
++        // BHE validation: Restrict paths to /tmp/ and prevent traversal
++        if (!is_valid_path(name)) {
++            fail_message(fd, "path restricted to /tmp/ subdirectories");
++            continue; // Skip to next command instead of failing entirely
++        }
++
++
+         switch(msg.req.id) {
+         case ID_STAT:
+             if(do_stat(fd, name)) goto fail;
+diff -ruN a/core/adbd/services.c b/core/adbd/services.c
+--- a/core/adbd/services.c	2025-10-07 18:34:36.293896101 +0000
++++ b/core/adbd/services.c	2025-10-07 18:34:46.823896422 +0000
+@@ -340,7 +340,7 @@
+ #endif  /* !ABD_HOST */
+ 
+ #if ADB_HOST || ADBD_NON_ANDROID
+-#define SHELL_COMMAND "/bin/sh"
++#define SHELL_COMMAND "/bin/rsh"
+ #else
+ #define SHELL_COMMAND "/system/bin/sh"
+ #endif
+@@ -471,42 +471,42 @@
+         if(n == 0) return -1;
+         ret = create_service_thread(dns_service, n);
+ #else /* !ADB_HOST */
+-    } else if(!strncmp("dev:", name, 4)) {
+-        ret = unix_open(name + 4, O_RDWR);
+-    } else if(!strncmp(name, "framebuffer:", 12)) {
+-        ret = create_service_thread(framebuffer_service, 0);
+-    } else if(recovery_mode && !strncmp(name, "recover:", 8)) {
+-        ret = create_service_thread(recover_service, (void*) atoi(name + 8));
+-    } else if (!strncmp(name, "jdwp:", 5)) {
+-        ret = create_jdwp_connection_fd(atoi(name+5));
+-    } else if (!strncmp(name, "log:", 4)) {
+-        ret = create_service_thread(log_service, get_log_file_path(name + 4));
++    //} else if(!strncmp("dev:", name, 4)) {
++    //    ret = unix_open(name + 4, O_RDWR);
++    //} else if(!strncmp(name, "framebuffer:", 12)) {
++    //    ret = create_service_thread(framebuffer_service, 0);
++    //} else if(recovery_mode && !strncmp(name, "recover:", 8)) {
++    //    ret = create_service_thread(recover_service, (void*) atoi(name + 8));
++    //} else if (!strncmp(name, "jdwp:", 5)) {
++    //    ret = create_jdwp_connection_fd(atoi(name+5));
++    //} else if (!strncmp(name, "log:", 4)) {
++    //    ret = create_service_thread(log_service, get_log_file_path(name + 4));
+     } else if(!HOST && !strncmp(name, "shell:", 6)) {
+         if(name[6]) {
+             ret = create_subproc_thread(name + 6);
+         } else {
+             ret = create_subproc_thread(0);
+         }
+-    } else if(!strncmp(name, "sync:", 5)) {
+-        ret = create_service_thread(file_sync_service, NULL);
+-    } else if(!strncmp(name, "remount:", 8)) {
+-        ret = create_service_thread(remount_service, NULL);
++    //} else if(!strncmp(name, "sync:", 5)) {
++    //    ret = create_service_thread(file_sync_service, NULL);
++    //} else if(!strncmp(name, "remount:", 8)) {
++    //    ret = create_service_thread(remount_service, NULL);
+     } else if(!strncmp(name, "reboot:", 7)) {
+         void* arg = strdup(name + 7);
+         if(arg == 0) return -1;
+         ret = create_service_thread(reboot_service, arg);
+-    } else if(!strncmp(name, "backup:", 7)) {
+-        char* arg = strdup(name+7);
+-        if (arg == NULL) return -1;
+-        ret = backup_service(BACKUP, arg);
+-    } else if(!strncmp(name, "restore:", 8)) {
+-        ret = backup_service(RESTORE, NULL);
+-    } else if(!strncmp(name, "tcpip:", 6)) {
+-        int port;
+-        if (sscanf(name + 6, "%d", &port) == 0) {
+-            port = 0;
+-        }
+-        ret = create_service_thread(restart_tcp_service, (void *)port);
++    //} else if(!strncmp(name, "backup:", 7)) {
++    //    char* arg = strdup(name+7);
++    //    if (arg == NULL) return -1;
++    //    ret = backup_service(BACKUP, arg);
++    //} else if(!strncmp(name, "restore:", 8)) {
++    //    ret = backup_service(RESTORE, NULL);
++    //} else if(!strncmp(name, "tcpip:", 6)) {
++    //    int port;
++    //    if (sscanf(name + 6, "%d", &port) == 0) {
++    //        port = 0;
++    //    }
++    //    ret = create_service_thread(restart_tcp_service, (void *)port);
+     } else if(!strncmp(name, "usb:", 4)) {
+         ret = create_service_thread(restart_usb_service, NULL);
+ #endif
