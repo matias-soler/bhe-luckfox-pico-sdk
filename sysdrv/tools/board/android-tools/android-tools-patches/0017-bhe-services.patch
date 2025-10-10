@@ -89,12 +89,8 @@ diff -ruN a/core/adbd/services.c b/core/adbd/services.c
          } else {
              ret = create_subproc_thread(0);
          }
--    } else if(!strncmp(name, "sync:", 5)) {
--        ret = create_service_thread(file_sync_service, NULL);
 -    } else if(!strncmp(name, "remount:", 8)) {
 -        ret = create_service_thread(remount_service, NULL);
-+    //} else if(!strncmp(name, "sync:", 5)) {
-+    //    ret = create_service_thread(file_sync_service, NULL);
 +    //} else if(!strncmp(name, "remount:", 8)) {
 +    //    ret = create_service_thread(remount_service, NULL);
      } else if(!strncmp(name, "reboot:", 7)) {
