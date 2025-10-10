@@ -1,0 +1,19 @@
+#!/bin/sh
+case "$1" in
+  start)
+    echo "Loading bhe-enclave module..."
+    # Use modprobe if in standard dir (preferred)
+    #modprobe bhe-enclave
+    # OR use insmod if keeping custom path
+    insmod /oem/usr/ko/bhe-enclave.ko
+    ;;
+  stop)
+    echo "Unloading bhe-enclave module..."
+    rmmod bhe-enclave
+    ;;
+  *)
+    echo "Usage: $0 {start|stop}"
+    exit 1
+    ;;
+esac
+exit 0
