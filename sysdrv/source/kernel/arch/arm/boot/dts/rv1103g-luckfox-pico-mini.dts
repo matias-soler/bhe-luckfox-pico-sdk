@@ -75,8 +75,23 @@
 
 /**********UART**********/
 /* UART3_M1 */
+//&uart3 {
+//	status = "disabled";
+//};
+
+
+/* UART3_M1 */
 &uart3 {
-	status = "disabled";
+	status = "okay";           /* enable UART3 */
+    pinctrl-0 = <&uart3m1_xfer>;
+    //pinctrl-names = "default";
+
+	/* serdev client for enclave */
+	enclave@0 {
+		compatible = "bhe,enclave";
+		reg = <0>;
+		status = "okay";
+	};
 };
 
 /* UART4_M1 */
