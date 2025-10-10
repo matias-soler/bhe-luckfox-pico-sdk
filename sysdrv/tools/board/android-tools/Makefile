@@ -1,6 +1,6 @@
 # Set DEV to 1 for development mode (preserve source dir for iterative edits)
 # Set DEV to 0 for production mode (clean build with re-extraction)
-DEV := 1
+DEV := 0
 
 ifeq ($(SYSDRV_PARAM), )
     SYSDRV_PARAM:=../../../Makefile.param
