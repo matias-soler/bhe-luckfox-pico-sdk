@@ -313,8 +313,9 @@ static int enclave_serdev_probe(struct serdev_device *serdev)
 
 static void enclave_serdev_remove(struct serdev_device *serdev)
 {
-    class_destroy(enclave_class);
     uart_serdev_remove(serdev);
+    class_destroy(enclave_class);
+
 }
 
 MODULE_DEVICE_TABLE(of, my_module_of_match);
